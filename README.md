@@ -2,4 +2,7 @@
 -------------------------------------------------------
 ### Participant : Kang jaewon, Kim Kyeongmin, Lee Kyungho, and Son Jaekyun
 
-- Used Kiwoom open API+
+### * Things need to be installed
+- Kiwoom open API+
+- Anaconda(To code with python3.7 in 32bit)
+- PyQt5
