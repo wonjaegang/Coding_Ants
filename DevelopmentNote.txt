@@ -7,9 +7,6 @@
 - dynamicCall : Open API의 메서드를 사용하기 위해서, QAXWidget의 인스턴스에서 dynamicCall 메서드를 사용한다.
                 인자에 호출하려는 메서드를 문자열 형식으로 입력해주면 된다.
 
-- Class QTextEdit : - append : 인스턴스에 문자열을 추가하는 메서드
-                    -
-
 - Module PyQt5 : * 위젯 인스턴스를 생성할 때, window 안에 속하게 하기 위해선 window 인스턴스를 인자로 받아준다
                  - QLabel: 텍스트 출력용 클래스  -
 
@@ -19,7 +16,8 @@
                  - QPushButton : 버튼생성용 클래스  -
 
                  - QTextEdit : 실행결과 메시지출력용 클래스  - setText : 초기값출력 메서드
-                                                          -
+                                                          - append : 인스턴스에 문자열을 추가하는 메서드
 
+- strip : 문자열의 공백을 제거하는 메서드
 
 - 다른 메서드에서 변수/인스턴스를 사용하려면 (인스턴스.변수)로 바인딩하자.
