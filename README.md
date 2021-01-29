@@ -1,6 +1,6 @@
 ## This repository is for *project : Coding Ants* - Auto Stock Investing project
 -------------------------------------------------------
-### Participant : Kang jaewon, Kim Kyeongmin, Lee Kyungho, and Son Jaekyun
+### Participant : Kang jaewon  Son Jaekyun
 
 ### * Things need to be installed
 - Kiwoom open API+
