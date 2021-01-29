@@ -6,6 +6,10 @@
 
 - dynamicCall : Open API의 메서드를 사용하기 위해서, QAXWidget의 인스턴스에서 dynamicCall 메서드를 사용한다.
                 인자에 호출하려는 메서드를 문자열 형식으로 입력해주면 된다.
+                호출하려는 메서드의 인자에 값을 넣기 위해선, 문자열에 자료형을 넣어주고 그 뒤 인자로 값을 준다.
+                e.g. sendCondition("0000", "이름", 1, 0)
+                      --> dynamicCall("sendCondition(QString, QString, int, int)", "0000", "이름", 1, 0)
+                string이 아니라 QString 임에 유의.
 
 - Module PyQt5 : * 위젯 인스턴스를 생성할 때, window 안에 속하게 하기 위해선 window 인스턴스를 인자로 받아준다
                  - QLabel: 텍스트 출력용 클래스  -
