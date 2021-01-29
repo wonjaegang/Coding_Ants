@@ -14,15 +14,16 @@ class MainWindow(QMainWindow):
         self.message = QTextEdit(self)
         self.accountInfo = QTextEdit(self)
         self.button1 = QPushButton("1: Loss Cut Scalping", self)
-        self.button1.clicked.connect(self.losscutScalping)
+        self.button1.clicked.connect(self.lossCutScalping)
         self.button1_Stop = QPushButton("Stop Running", self)
-        self.button1_Stop.clicked.connect(self.losscutScalping_Stop)
+        self.button1_Stop.clicked.connect(self.lossCutScalping_Stop)
         self.button2 = QPushButton("2: Soared&WeakSelling", self)
-        self.button2.clicked.connect(self.soaredNweakselling)
+        self.button2.clicked.connect(self.soared_weakSelling)
 
         self.setGUI()
         self.openLoginWindow()
         self.kiwoom.OnReceiveTrData.connect(self.receiveTrData)
+        self.kiwoom.OnReceiveTrCondition.connect(self.receiveSearchResult)
 
     def setGUI(self):
         self.setWindowTitle("Coding Ants - Auto stock investing program")
@@ -54,26 +55,33 @@ class MainWindow(QMainWindow):
 
     def conditionSaved(self, saved, _):
         if saved:
-            self.message.append("Conditions for searching have been saved.")
+            self.message.append("Search conditions have been saved.")
             string = self.kiwoom.dynamicCall("GetConditionNameList()")
             split_once = string.split(';')
             split_once.pop()
             for nameIndex in split_once:
                 split_twice = nameIndex.split('^')
                 self.searchConditions[split_twice[0]] = split_twice[1]
-            print(self.searchConditions)
 
-    def losscutScalping(self):
+    def lossCutScalping(self):
         self.message.append("Algorithm Started : Loss Cut Scalping ")
         btn_enable_switch(self.button1_Stop, self.button1)
         pass
 
-    def losscutScalping_Stop(self):
+    def lossCutScalping_Stop(self):
         self.message.append("Algorithm Stopped : Loss Cut Scalping ")
         btn_enable_switch(self.button1, self.button1_Stop)
 
-    def soaredNweakselling(self):
+    def soared_weakSelling(self):
         self.button2.setEnabled(False)
+        self.sendCondition("000", "0000")
+
+    def sendCondition(self, index, screenNo):
+        self.kiwoom.dynamicCall("SendCondition(QString, QString, int, int)",
+                                screenNo, self.searchConditions[index], index, 0)
+
+    def receiveSearchResult(self, screenNo, codeList, conditionName, index_int, Next_int):
+        self.accountInfo.append(codeList)
 
     def receiveTrData(self, screenNo, requestName, TrCode, recordName, PreNext, _0, _1, _2, _3):
         pass
