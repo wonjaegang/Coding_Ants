@@ -9,7 +9,11 @@ class KiwoomAPI(QAxWidget):
         super().__init__("KHOPENAPI.KHOpenAPICtrl.1")
         self.searchConditions = {}
         self.OnReceiveTrCondition.connect(self.receiveSearchResult)
+        self.OnReceiveRealCondition.connect(self.receiveRealTimeSearchResult)
         self.OnReceiveTrData.connect(self.receiveTrData)
+
+        self.KHScalping = TradingAlgorithm()
+        self.Soared_WS = TradingAlgorithm()
 
         self.login()
 
@@ -17,11 +21,11 @@ class KiwoomAPI(QAxWidget):
         pass
 
     def soaredWeakSelling(self):
-        self.sendCondition("000", "0000")
+        self.sendCondition("000", "0000", False)
         pass
 
     def KyunghoScalping(self):
-        self.sendCondition("002", "0001")
+        self.sendCondition("002", "0001", True)
         pass
 
     def receiveSearchResult(self, screenNo, codeList, conditionName, index_int, Next_int):
@@ -29,13 +33,20 @@ class KiwoomAPI(QAxWidget):
             resultList = codeList.split(';')
             resultList.pop()
             for code in resultList:
+                self.Soared_WS.dealingItems.append(code)
                 mainWindow.accountInfo.append(code)
 
         if screenNo == "0001":
             resultList = codeList.split(';')
             resultList.pop()
             for code in resultList:
+                self.KHScalping.dealingItems.append(code)
                 mainWindow.accountInfo.append(code)
+
+    def receiveRealTimeSearchResult(self, code, insertDelete, conditionName, index):
+        if index == "002":
+            if insertDelete == "I":
+                self.KHScalping.dealingItems.append(code)
 
     def receiveTrData(self, screenNo, requestName, TrCode, recordName, PreNext, _0, _1, _2, _3):
         pass
@@ -64,15 +75,17 @@ class KiwoomAPI(QAxWidget):
         else:
             mainWindow.message.append("Error : Failed to load search conditions")
 
-    def sendCondition(self, index, screenNo):
-        self.dynamicCall("SendCondition(QString, QString, int, int)",
-                         screenNo, self.searchConditions[index], index, 0)
+    def sendCondition(self, index, screenNo, realTime):
+        isRequest = self.dynamicCall("SendCondition(QString, QString, int, int)",
+                                     screenNo, self.searchConditions[index], index, realTime)
+        if not isRequest:
+            mainWindow.message.append("Error: Failed to request condition-searching")
 
 
 class TradingAlgorithm(KiwoomAPI):
     def __init__(self):
         super().__init__()
-        pass
+        self.dealingItems = []
 
     def buyingOffer(self):
         pass
