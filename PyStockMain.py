@@ -13,6 +13,33 @@ class KiwoomAPI(QAxWidget):
 
         self.login()
 
+    def lossCutScalping(self):
+        pass
+
+    def soaredWeakSelling(self):
+        self.sendCondition("000", "0000")
+        pass
+
+    def KyunghoScalping(self):
+        self.sendCondition("002", "0001")
+        pass
+
+    def receiveSearchResult(self, screenNo, codeList, conditionName, index_int, Next_int):
+        if screenNo == "0000":
+            resultList = codeList.split(';')
+            resultList.pop()
+            for code in resultList:
+                mainWindow.accountInfo.append(code)
+
+        if screenNo == "0001":
+            resultList = codeList.split(';')
+            resultList.pop()
+            for code in resultList:
+                mainWindow.accountInfo.append(code)
+
+    def receiveTrData(self, screenNo, requestName, TrCode, recordName, PreNext, _0, _1, _2, _3):
+        pass
+
     def login(self):
         self.dynamicCall("CommConnect()")
         self.OnEventConnect.connect(self.loginDone)
@@ -37,20 +64,9 @@ class KiwoomAPI(QAxWidget):
         else:
             mainWindow.message.append("Error : Failed to load search conditions")
 
-    def soaredWeakSelling(self):
-        self.sendCondition("000", "0000")
-        pass
-
     def sendCondition(self, index, screenNo):
         self.dynamicCall("SendCondition(QString, QString, int, int)",
-                                   screenNo, self.searchConditions[index], index, 0)
-
-    def receiveSearchResult(self, screenNo, codeList, conditionName, index_int, Next_int):
-        if screenNo == "0000":
-            print(codeList)
-
-    def receiveTrData(self, screenNo, requestName, TrCode, recordName, PreNext, _0, _1, _2, _3):
-        pass
+                         screenNo, self.searchConditions[index], index, 0)
 
 
 class MainWindow(QMainWindow):
@@ -67,6 +83,10 @@ class MainWindow(QMainWindow):
         self.button1_Stop.clicked.connect(self.stop_lossCutScalping)
         self.button2 = QPushButton("2: Soared&WeakSelling", self)
         self.button2.clicked.connect(self.run_soaredWeakSelling)
+        self.button3 = QPushButton("3: Kyungho's Scalping", self)
+        self.button3.clicked.connect(self.run_KyunghoScalping)
+        self.button3_Stop = QPushButton("Stop Running", self)
+        self.button3_Stop.clicked.connect(self.stop_KyunghoScalping)
 
         self.setGUI()
 
@@ -85,22 +105,34 @@ class MainWindow(QMainWindow):
         self.button1_Stop.setGeometry(520, 50, 100, 30)
         self.button1_Stop.setEnabled(False)
         self.button2.setGeometry(350, 100, 160, 30)
+        self.button3.setGeometry(350, 150, 160, 30)
+        self.button3_Stop.setGeometry(520, 150, 100, 30)
 
     def run_lossCutScalping(self):
         self.message.append("Algorithm Started : Loss Cut Scalping ")
-        btn_enable_switch(self.button1_Stop, self.button1)
+        btn_switching(self.button1_Stop, self.button1)
         pass
 
     def stop_lossCutScalping(self):
         self.message.append("Algorithm Stopped : Loss Cut Scalping ")
-        btn_enable_switch(self.button1, self.button1_Stop)
+        btn_switching(self.button1, self.button1_Stop)
 
     def run_soaredWeakSelling(self):
+        self.message.append("Algorithm Started : Weak Selling Stock after soared")
         self.button2.setEnabled(False)
         self.kiwoomAPI.soaredWeakSelling()
 
+    def run_KyunghoScalping(self):
+        self.message.append("Algorithm Started : Kyungho Scalping ")
+        btn_switching(self.button3_Stop, self.button3)
+        self.kiwoomAPI.KyunghoScalping()
 
-def btn_enable_switch(btn1, btn2):
+    def stop_KyunghoScalping(self):
+        self.message.append("Algorithm Stopped : Kyungho Scalping ")
+        btn_switching(self.button3, self.button3_Stop)
+
+
+def btn_switching(btn1, btn2):
     btn1.setEnabled(True)
     btn2.setEnabled(False)
 
