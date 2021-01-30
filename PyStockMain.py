@@ -111,6 +111,8 @@ class MainWindow(QMainWindow):
         self.message.setEnabled(False)
         label_accountInfo = QLabel("Account Info", self)
         label_accountInfo.move(40, 170)
+        label_algorithms = QLabel("Algorithms", self)
+        label_algorithms.move(350, 20)
         self.accountInfo.setGeometry(30, 200, 300, 500)
         self.accountInfo.setEnabled(False)
         self.button1.setGeometry(350, 50, 160, 30)
@@ -119,6 +121,7 @@ class MainWindow(QMainWindow):
         self.button2.setGeometry(350, 100, 160, 30)
         self.button3.setGeometry(350, 150, 160, 30)
         self.button3_Stop.setGeometry(520, 150, 100, 30)
+        self.button3_Stop.setEnabled(False)
 
     def run_lossCutScalping(self):
         self.message.append("Algorithm Started : Loss Cut Scalping ")
