@@ -69,6 +69,18 @@ class KiwoomAPI(QAxWidget):
                          screenNo, self.searchConditions[index], index, 0)
 
 
+class TradingAlgorithm(KiwoomAPI):
+    def __init__(self):
+        super().__init__()
+        pass
+
+    def buyingOffer(self):
+        pass
+
+    def sellingOffer(self):
+        pass
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
