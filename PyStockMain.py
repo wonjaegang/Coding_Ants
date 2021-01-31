@@ -82,9 +82,8 @@ class KiwoomAPI(QAxWidget):
             mainWindow.message.append("Error: Failed to request condition-searching")
 
 
-class TradingAlgorithm(KiwoomAPI):
+class TradingAlgorithm:
     def __init__(self):
-        super().__init__()
         self.dealingItems = []
 
     def buyingOffer(self):
