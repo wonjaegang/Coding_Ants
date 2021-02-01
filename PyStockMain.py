@@ -1,5 +1,6 @@
 import sys
 from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QAxContainer import *
 
@@ -8,14 +9,24 @@ class KiwoomAPI(QAxWidget):
     def __init__(self):
         super().__init__("KHOPENAPI.KHOpenAPICtrl.1")
         self.searchConditions = {}
-        self.OnReceiveTrCondition.connect(self.receiveSearchResult)
-        self.OnReceiveRealCondition.connect(self.receiveRealTimeSearchResult)
-        self.OnReceiveTrData.connect(self.receiveTrData)
+        self.priceDataDic = {}
+        self.signalSlot()
 
         self.KHScalping = TradingAlgorithm()
         self.Soared_WS = TradingAlgorithm()
 
         self.login()
+        self.loginLoop = QEventLoop()
+        self.loginLoop.exec()
+        self.accountNo = self.getAccountNo()
+        self.saveSearchConditions()
+
+    def signalSlot(self):
+        self.OnEventConnect.connect(self.loginDone)
+        self.OnReceiveConditionVer.connect(self.conditionSaved)
+        self.OnReceiveTrCondition.connect(self.receiveSearchResult)
+        self.OnReceiveRealCondition.connect(self.receiveRealTimeSearchResult)
+        self.OnReceiveTrData.connect(self.receiveTrData)
 
     def lossCutScalping(self):
         pass
@@ -25,43 +36,63 @@ class KiwoomAPI(QAxWidget):
         pass
 
     def KyunghoScalping(self):
-        self.sendCondition("002", "0001", True)
-        pass
+        self.sendCondition("002", "0001", False)
+        self.searchLoop = QEventLoop()
+        self.searchLoop.exec()
+        for code in self.KHScalping.dealingItems:
+            self.getPriceData(code, "20210201")
+            self.KHScalping.dealingItems[code] = self.priceDataDic
+            print("%s: Done" % code)
+        # current_price = self.getPrice(self.KHScalping.dealingItems[0], "20210201")
+        # mainWindow.accountInfo.append(current_price)
+        print(self.KHScalping.dealingItems)
 
     def receiveSearchResult(self, screenNo, codeList, conditionName, index_int, Next_int):
         if screenNo == "0000":
             resultList = codeList.split(';')
             resultList.pop()
             for code in resultList:
-                self.Soared_WS.dealingItems.append(code)
+                self.Soared_WS.dealingItems[code] = {}
                 mainWindow.accountInfo.append(code)
 
         if screenNo == "0001":
             resultList = codeList.split(';')
             resultList.pop()
             for code in resultList:
-                self.KHScalping.dealingItems.append(code)
+                self.KHScalping.dealingItems[code] = {}
                 mainWindow.accountInfo.append(code)
+            self.searchLoop.exit()
 
     def receiveRealTimeSearchResult(self, code, insertDelete, conditionName, index):
-        if index == "002":
-            if insertDelete == "I":
-                self.KHScalping.dealingItems.append(code)
+        # if index == "002":
+        #     if insertDelete == "I":
+        #         self.KHScalping.dealingItems.append(code)
+        #         mainWindow.accountInfo.append(code)
+        pass
 
     def receiveTrData(self, screenNo, requestName, TrCode, recordName, PreNext, _0, _1, _2, _3):
-        pass
+        if requestName == "Check Price Data":
+            self.priceDataDic.clear()
+            dataNameList = ["현재가", "거래량", "시가"]
+            for dataName in dataNameList:
+                data = self.GetCommData(TrCode, requestName, 0, dataName)
+                self.priceDataDic[dataName] = int(data)
+            self.requestLoop.exit()
 
     def login(self):
         self.dynamicCall("CommConnect()")
-        self.OnEventConnect.connect(self.loginDone)
 
     def loginDone(self):
-        mainWindow.message.append("Login Succeed")
-        self.saveSearchConditions()
+        self.loginLoop.exit()
+
+    def getAccountNo(self):
+        string = self.dynamicCall("GetLoginInfo(QString)", "ACCNO")
+        accountNo = string.split(';')
+        accountNo.pop()
+        return accountNo[0]
 
     def saveSearchConditions(self):
         self.dynamicCall("GetConditionLoad()")
-        self.OnReceiveConditionVer.connect(self.conditionSaved)
 
     def conditionSaved(self, saved, _):
         if saved:
@@ -81,10 +112,32 @@ class KiwoomAPI(QAxWidget):
         if not isRequest:
             mainWindow.message.append("Error: Failed to request condition-searching")
 
+    def requestData(self, requestName, TrCode, screenNo):
+        PreNext = 0
+        self.dynamicCall("CommRqData(QString, QString, int, QString)", requestName, TrCode, PreNext, screenNo)
+
+    def getPriceData(self, code, date):
+        self.dynamicCall("SetInputValue(QString, QString)", "종목코드", code)
+        self.dynamicCall("SetInputValue(QString, QString)", "기준일자", date)
+        self.dynamicCall("SetInputValue(QString, QString)", "수정주가구분", "1")
+        self.requestData("Check Price Data", "opt10081", "0001")
+        self.requestLoop = QEventLoop()
+        self.requestLoop.exec()
+
+    def send_order(self, requestName, screenNo, orderType, code, quantity, price):
+        accountNo = self.accountNo
+        priceType = "03"
+        orderNo = ""
+        isRequest = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
+                                     [requestName, screenNo, accountNo, orderType, code, quantity, price, priceType,
+                                      orderNo])
+        if not isRequest:
+            mainWindow.message.append("Error: Order Dismissed")
+
 
 class TradingAlgorithm:
     def __init__(self):
-        self.dealingItems = []
+        self.dealingItems = {}
 
     def buyingOffer(self):
         pass
