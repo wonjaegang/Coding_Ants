@@ -5,12 +5,25 @@ from PyQt5.QtGui import *
 from PyQt5.QAxContainer import *
 
 
+# 자동매수/매도 알고리즘 클래스
+class TradingAlgorithm:
+    def __init__(self):
+        self.dealingItems = {}
+
+    def buyingOffer(self):
+        pass
+
+    def sellingOffer(self):
+        pass
+
+
+# 키움 open API 관련 메서드들을 처리하는 클래스
 class KiwoomAPI(QAxWidget):
     def __init__(self):
         super().__init__("KHOPENAPI.KHOpenAPICtrl.1")
         self.searchConditions = {}
         self.priceDataDic = {}
-        self.signalSlot()
+        self.setSignalSlot()
 
         self.KHScalping = TradingAlgorithm()
         self.Soared_WS = TradingAlgorithm()
@@ -21,20 +34,24 @@ class KiwoomAPI(QAxWidget):
         self.accountNo = self.getAccountNo()
         self.saveSearchConditions()
 
-    def signalSlot(self):
+    # 이벤트와 그에 따른 이벤트 처리 메서드
+    def setSignalSlot(self):
         self.OnEventConnect.connect(self.loginDone)
         self.OnReceiveConditionVer.connect(self.conditionSaved)
         self.OnReceiveTrCondition.connect(self.receiveSearchResult)
         self.OnReceiveRealCondition.connect(self.receiveRealTimeSearchResult)
         self.OnReceiveTrData.connect(self.receiveTrData)
 
+    # 손해를 최소화하며 단기매수/매도하는 알고리즘
     def lossCutScalping(self):
         pass
 
+    # 급등 후 매도세가 약한 종목들을 포착하여 구매하는 알고리즘
     def soaredWeakSelling(self):
         self.sendCondition("000", "0000", False)
         pass
 
+    # 전일종가대비 10%이상 급등한 종목들을 이용해 단기매수/매도하는 알고리즘
     def KyunghoScalping(self):
         self.sendCondition("002", "0000", False)
         self.searchLoop = QEventLoop()
@@ -47,6 +64,9 @@ class KiwoomAPI(QAxWidget):
         for dic in self.KHScalping.dealingItems:
             print(dic, end=': ')
             print(self.KHScalping.dealingItems[dic])
+        pass
+
+    # ==== 조회요청 후 수신 이벤트처리 메서드 ==============================================================================
 
     def receiveSearchResult(self, screenNo, codeList, conditionName, index_int, Next_int):
         if conditionName == self.searchConditions["000"]:
@@ -79,6 +99,8 @@ class KiwoomAPI(QAxWidget):
                 data = self.GetCommData(TrCode, requestName, 0, dataName)
                 self.priceDataDic[dataName] = int(data)
             self.requestLoop.exit()
+
+    # ==================================================================================================================
 
     def login(self):
         self.dynamicCall("CommConnect()")
@@ -113,10 +135,8 @@ class KiwoomAPI(QAxWidget):
         if not isRequest:
             mainWindow.message.append("Error: Failed to request condition-searching")
 
-    def requestData(self, requestName, TrCode, screenNo):
-        PreNext = 0
-        self.dynamicCall("CommRqData(QString, QString, int, QString)", requestName, TrCode, PreNext, screenNo)
-
+    # 해당 종목/날짜의 가격데이터(현재가, 거래량, 시가)를 클래스의 priceDataDic 에 저장한다.
+    # e.g. {"현재가": 15030, "거래량": 382891, "시가": 15120}
     def getPriceData(self, code, date):
         self.dynamicCall("SetInputValue(QString, QString)", "종목코드", code)
         self.dynamicCall("SetInputValue(QString, QString)", "기준일자", date)
@@ -125,9 +145,13 @@ class KiwoomAPI(QAxWidget):
         self.requestLoop = QEventLoop()
         self.requestLoop.exec()
 
+    def requestData(self, requestName, TrCode, screenNo):
+        PreNext = 0
+        self.dynamicCall("CommRqData(QString, QString, int, QString)", requestName, TrCode, PreNext, screenNo)
+
     def send_order(self, requestName, screenNo, orderType, code, quantity, price):
         accountNo = self.accountNo
-        priceType = "03"
+        priceType = "03"  # 시장가
         orderNo = ""
         isRequest = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
                                      [requestName, screenNo, accountNo, orderType, code, quantity, price, priceType,
@@ -136,17 +160,7 @@ class KiwoomAPI(QAxWidget):
             mainWindow.message.append("Error: Order Dismissed")
 
 
-class TradingAlgorithm:
-    def __init__(self):
-        self.dealingItems = {}
-
-    def buyingOffer(self):
-        pass
-
-    def sellingOffer(self):
-        pass
-
-
+# 메인 GUI 창 클래스
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -168,6 +182,7 @@ class MainWindow(QMainWindow):
 
         self.setGUI()
 
+    # GUI 배치관련 코드
     def setGUI(self):
         self.setWindowTitle("Coding Ants - Auto stock investing program")
         self.setGeometry(300, 300, 650, 750)
