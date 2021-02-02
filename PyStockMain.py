@@ -36,27 +36,27 @@ class KiwoomAPI(QAxWidget):
         pass
 
     def KyunghoScalping(self):
-        self.sendCondition("002", "0001", False)
+        self.sendCondition("002", "0000", False)
         self.searchLoop = QEventLoop()
         self.searchLoop.exec()
         for code in self.KHScalping.dealingItems:
-            self.getPriceData(code, "20210201")
+            self.getPriceData(code, todayString())
             self.KHScalping.dealingItems[code] = self.priceDataDic
-            print("%s: Done" % code)
+            print("%s: Data loading completed" % code)
             waitForMilliSec(200)
-        # current_price = self.getPrice(self.KHScalping.dealingItems[0], "20210201")
-        # mainWindow.accountInfo.append(current_price)
-        print(self.KHScalping.dealingItems)
+        for dic in self.KHScalping.dealingItems:
+            print(dic, end=': ')
+            print(self.KHScalping.dealingItems[dic])
 
     def receiveSearchResult(self, screenNo, codeList, conditionName, index_int, Next_int):
-        if screenNo == "0000":
+        if conditionName == self.searchConditions["000"]:
             resultList = codeList.split(';')
             resultList.pop()
             for code in resultList:
                 self.Soared_WS.dealingItems[code] = {}
                 mainWindow.accountInfo.append(code)
 
-        if screenNo == "0001":
+        if conditionName == self.searchConditions["002"]:
             resultList = codeList.split(';')
             resultList.pop()
             for code in resultList:
@@ -72,7 +72,7 @@ class KiwoomAPI(QAxWidget):
         pass
 
     def receiveTrData(self, screenNo, requestName, TrCode, recordName, PreNext, _0, _1, _2, _3):
-        if requestName == "Check Price Data":
+        if requestName == "getPriceData":
             self.priceDataDic.clear()
             dataNameList = ["현재가", "거래량", "시가"]
             for dataName in dataNameList:
@@ -121,7 +121,7 @@ class KiwoomAPI(QAxWidget):
         self.dynamicCall("SetInputValue(QString, QString)", "종목코드", code)
         self.dynamicCall("SetInputValue(QString, QString)", "기준일자", date)
         self.dynamicCall("SetInputValue(QString, QString)", "수정주가구분", "1")
-        self.requestData("Check Price Data", "opt10081", "0001")
+        self.requestData("getPriceData", "opt10081", "0000")
         self.requestLoop = QEventLoop()
         self.requestLoop.exec()
 
@@ -222,6 +222,12 @@ def waitForMilliSec(milliSec):
     loop = QEventLoop()
     QTimer.singleShot(milliSec, loop.quit)
     loop.exec_()
+
+
+def todayString():
+    nowDate = QDate.currentDate()
+    today = "%04d%02d%02d" % (nowDate.year(), nowDate.month(), nowDate.day())
+    return today
 
 
 if __name__ == "__main__":
