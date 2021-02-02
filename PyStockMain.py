@@ -43,6 +43,7 @@ class KiwoomAPI(QAxWidget):
             self.getPriceData(code, "20210201")
             self.KHScalping.dealingItems[code] = self.priceDataDic
             print("%s: Done" % code)
+            waitForMilliSec(200)
         # current_price = self.getPrice(self.KHScalping.dealingItems[0], "20210201")
         # mainWindow.accountInfo.append(current_price)
         print(self.KHScalping.dealingItems)
@@ -215,6 +216,12 @@ class MainWindow(QMainWindow):
 def btn_switching(btn1, btn2):
     btn1.setEnabled(True)
     btn2.setEnabled(False)
+
+
+def waitForMilliSec(milliSec):
+    loop = QEventLoop()
+    QTimer.singleShot(milliSec, loop.quit)
+    loop.exec_()
 
 
 if __name__ == "__main__":
