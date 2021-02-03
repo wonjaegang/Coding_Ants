@@ -9,6 +9,7 @@ from PyQt5.QAxContainer import *
 class TradingAlgorithm:
     def __init__(self):
         self.dealingItems = {}
+        self.holdingItems = {}
 
     def buyingOffer(self):
         pass
@@ -25,7 +26,7 @@ class KiwoomAPI(QAxWidget):
         self.priceDataDic = {}
         self.setSignalSlot()
 
-        self.KHScalping = TradingAlgorithm()
+        self.KH_Scalping = TradingAlgorithm()
         self.Soared_WS = TradingAlgorithm()
 
         self.login()
@@ -41,6 +42,7 @@ class KiwoomAPI(QAxWidget):
         self.OnReceiveTrCondition.connect(self.receiveSearchResult)
         self.OnReceiveRealCondition.connect(self.receiveRealTimeSearchResult)
         self.OnReceiveTrData.connect(self.receiveTrData)
+        self.OnReceiveChejanData.connect(self.receiveChejanData)
 
     # 손해를 최소화하며 단기매수/매도하는 알고리즘
     def lossCutScalping(self):
@@ -53,18 +55,31 @@ class KiwoomAPI(QAxWidget):
 
     # 전일종가대비 10%이상 급등한 종목들을 이용해 단기매수/매도하는 알고리즘
     def KyunghoScalping(self):
+        # 조건검색을 사용해 종목들을 dealingItem 에 저장
         self.sendCondition("002", "0000", False)
         self.searchLoop = QEventLoop()
         self.searchLoop.exec()
-        for code in self.KHScalping.dealingItems:
-            self.getPriceData(code, todayString())
-            self.KHScalping.dealingItems[code] = self.priceDataDic
-            print("%s: Data loading completed" % code)
+
+        # 초기매수 - 체결성공시 holdingItem 에 저장됨
+        for code in self.KH_Scalping.dealingItems:
+            self.send_order("KyunghoScalping_initial_order", "0000", "신규매수", code, 1, "시장가", 0)
             waitForMilliSec(200)
-        for dic in self.KHScalping.dealingItems:
-            print(dic, end=': ')
-            print(self.KHScalping.dealingItems[dic])
-        pass
+
+        waitForMilliSec(5000)
+
+        # 보유종목들의 실시간 가격확인 및 매도
+        # API 의 실시간조회 메서드를 사용하지 않음. 사용하는 것으로 추후에 변경해야함.
+        for _ in range(50):
+            for code in self.KH_Scalping.holdingItems:
+                self.getPriceData(code, todayString())
+                self.KH_Scalping.holdingItems[code].update(self.priceDataDic.copy())
+                print(code, end=': ')
+                print(self.KH_Scalping.holdingItems[code])
+                if self.KH_Scalping.holdingItems[code]["매수가"] - self.KH_Scalping.holdingItems[code]["현재가"] > 10:
+                    self.send_order("KyunghoScalping_selling_order", "0000", "신규매도", code, 1, "시장가", 0)
+                    waitForMilliSec(400)
+                else:
+                    waitForMilliSec(200)
 
     # ==== 조회요청 후 수신 이벤트처리 메서드 ==============================================================================
 
@@ -80,14 +95,14 @@ class KiwoomAPI(QAxWidget):
             resultList = codeList.split(';')
             resultList.pop()
             for code in resultList:
-                self.KHScalping.dealingItems[code] = {}
+                self.KH_Scalping.dealingItems[code] = {}
                 mainWindow.accountInfo.append(code)
             self.searchLoop.exit()
 
     def receiveRealTimeSearchResult(self, code, insertDelete, conditionName, index):
         # if index == "002":
         #     if insertDelete == "I":
-        #         self.KHScalping.dealingItems.append(code)
+        #         self.KH_Scalping.dealingItems.append(code)
         #         mainWindow.accountInfo.append(code)
         pass
 
@@ -99,6 +114,47 @@ class KiwoomAPI(QAxWidget):
                 data = self.GetCommData(TrCode, requestName, 0, dataName)
                 self.priceDataDic[dataName] = int(data)
             self.requestLoop.exit()
+
+    def receiveChejanData(self, dataType, itemCount, FIDList):
+        itemName = self.GetChejanData(302)
+        code = self.GetChejanData(9001)[1:]
+        orderType = self.GetChejanData(905)[1:]
+        orderState = self.GetChejanData(913)
+        orderQuantity = self.GetChejanData(900)
+        fillPrice = self.GetChejanData(910)
+
+        # KH_Scalping - 매수/매도시 holdingItem 에 추가/제거
+        if code in self.KH_Scalping.dealingItems:
+            if orderType == "매수":
+                if orderState == "체결":
+                    self.KH_Scalping.holdingItems[code] = {"매수가": int(fillPrice), "수량": orderQuantity}
+            if orderType == "매도":
+                if orderState == "체결":
+                    gain = self.KH_Scalping.holdingItems[code]["매수가"] - int(fillPrice)
+                    print("수익:", gain)
+                    # del self.KH_Scalping.holdingItems[code]
+                pass
+
+        # 접수 & 체결 데이터
+        if dataType == "0":
+            print("-" * 50)
+            print("접수 / 체결")
+            print("주문번호:", self.GetChejanData(9203))
+            print("종목명:", itemName)
+            print("종목코드:", code)
+            print("주문구분:", orderType)
+            print("주문상태:", orderState)
+            print("주문수량:", orderQuantity)
+            print("주문가격:", fillPrice)
+            print("-" * 50)
+        # 잔고 데이터
+        if dataType == "1":
+            print("-" * 50)
+            print("잔고")
+            print("종목명:", itemName)
+            print("종목코드:", code)
+            print("보유수량:", self.GetChejanData(930))
+            print("-" * 50)
 
     # ==================================================================================================================
 
@@ -141,7 +197,7 @@ class KiwoomAPI(QAxWidget):
         self.dynamicCall("SetInputValue(QString, QString)", "종목코드", code)
         self.dynamicCall("SetInputValue(QString, QString)", "기준일자", date)
         self.dynamicCall("SetInputValue(QString, QString)", "수정주가구분", "1")
-        self.requestData("getPriceData", "opt10081", "0000")
+        self.requestData("getPriceData", "opt10081", "0001")
         self.requestLoop = QEventLoop()
         self.requestLoop.exec()
 
@@ -149,15 +205,38 @@ class KiwoomAPI(QAxWidget):
         PreNext = 0
         self.dynamicCall("CommRqData(QString, QString, int, QString)", requestName, TrCode, PreNext, screenNo)
 
-    def send_order(self, requestName, screenNo, orderType, code, quantity, price):
+    def send_order(self, requestName, screenNo, orderType, code, quantity, priceType, price):
+        if orderType == "신규매수":
+            orderTypeInt = 1
+        elif orderType == "신규매도":
+            orderTypeInt = 2
+        elif orderType == "매수취소":
+            orderTypeInt = 3
+        elif orderType == "매도취소":
+            orderTypeInt = 4
+        elif orderType == "매수정정":
+            orderTypeInt = 5
+        elif orderType == "매도정정":
+            orderTypeInt = 6
+        else:
+            print("Error: Send_order() - Order type")
+            orderTypeInt = 0
+
+        if priceType == "시장가":
+            priceTypeInt = "03"
+            price = 0
+        elif priceType == "지정가":
+            priceTypeInt = "00"
+        else:
+            print("Error: Send_order() - Price type")
+            priceTypeInt = ""
         accountNo = self.accountNo
-        priceType = "03"  # 시장가
         orderNo = ""
         isRequest = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
-                                     [requestName, screenNo, accountNo, orderType, code, quantity, price, priceType,
-                                      orderNo])
-        if not isRequest:
-            mainWindow.message.append("Error: Order Dismissed")
+                                     [requestName, screenNo, accountNo, orderTypeInt, code, quantity, price,
+                                      priceTypeInt, orderNo])
+        if isRequest:
+            mainWindow.message.append("Error: Order Dismissed : %s" % code)
 
 
 # 메인 GUI 창 클래스
