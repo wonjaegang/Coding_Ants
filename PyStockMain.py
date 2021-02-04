@@ -96,6 +96,7 @@ class KiwoomAPI(QAxWidget):
             waitForMilliSec(10000)
 
             # 보유종목들을 모두 매도하면 알고리즘 종료
+            # 알고리즘 종료시 여기서 계속 걸려서 오류남. 확인필요.
             if not list(self.KH_Scalping.holdingItems.keys()):
                 print("\nTotal Profit: %d" % self.KH_Scalping.profit)
                 for code in self.KH_Scalping.soldItems:
