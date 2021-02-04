@@ -10,6 +10,8 @@ class TradingAlgorithm:
     def __init__(self):
         self.dealingItems = {}
         self.holdingItems = {}
+        self.soldItems = {}
+        self.profit = 0
 
     def buyingOffer(self):
         pass
@@ -69,17 +71,37 @@ class KiwoomAPI(QAxWidget):
 
         # 보유종목들의 실시간 가격확인 및 매도
         # API 의 실시간조회 메서드를 사용하지 않음. 사용하는 것으로 추후에 변경해야함.
-        for _ in range(50):
+        for i in range(500):
+            print("Loop %d" % i)
+            print("Current Holding Items:", list(self.KH_Scalping.holdingItems.keys()))
+
             for code in self.KH_Scalping.holdingItems:
                 self.getPriceData(code, todayString())
                 self.KH_Scalping.holdingItems[code].update(self.priceDataDic.copy())
                 print(code, end=': ')
                 print(self.KH_Scalping.holdingItems[code])
-                if self.KH_Scalping.holdingItems[code]["매수가"] - self.KH_Scalping.holdingItems[code]["현재가"] > 10:
+                profit = self.KH_Scalping.holdingItems[code]["현재가"] - self.KH_Scalping.holdingItems[code]["매수가"]
+                if -10 > profit or profit > 10:
                     self.send_order("KyunghoScalping_selling_order", "0000", "신규매도", code, 1, "시장가", 0)
                     waitForMilliSec(400)
                 else:
                     waitForMilliSec(200)
+
+            for code in self.KH_Scalping.soldItems:
+                if code in self.KH_Scalping.holdingItems:
+                    del self.KH_Scalping.holdingItems[code]
+
+            print("\nCurrent Profit: %d\n" % self.KH_Scalping.profit)
+            print("=" * 50)
+            waitForMilliSec(10000)
+
+            # 보유종목들을 모두 매도하면 알고리즘 종료
+            if not list(self.KH_Scalping.holdingItems.keys()):
+                print("\nTotal Profit: %d" % self.KH_Scalping.profit)
+                for code in self.KH_Scalping.soldItems:
+                    print("종목코드: %s  - 수익: %d" % (code, self.KH_Scalping.soldItems[code]["수익"]))
+                print("\nAlgorithm Over.")
+                return 0
 
     # ==== 조회요청 후 수신 이벤트처리 메서드 ==============================================================================
 
@@ -129,11 +151,12 @@ class KiwoomAPI(QAxWidget):
                 if orderState == "체결":
                     self.KH_Scalping.holdingItems[code] = {"매수가": int(fillPrice), "수량": orderQuantity}
             if orderType == "매도":
+                if orderState == "접수":
+                    self.KH_Scalping.soldItems[code] = {"수익": 0}
                 if orderState == "체결":
-                    gain = self.KH_Scalping.holdingItems[code]["매수가"] - int(fillPrice)
-                    print("수익:", gain)
-                    # del self.KH_Scalping.holdingItems[code]
-                pass
+                    gain = int(fillPrice) - self.KH_Scalping.holdingItems[code]["매수가"]
+                    self.KH_Scalping.soldItems[code]["수익"] += gain
+                    self.KH_Scalping.profit += gain
 
         # 접수 & 체결 데이터
         if dataType == "0":
