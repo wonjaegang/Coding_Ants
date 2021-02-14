@@ -5,6 +5,7 @@ from PyQt5.QtGui import *
 from PyQt5.QAxContainer import *
 
 # 손재균 하이요
+# 소연-하이!
 
 
 # 자동매수/매도 알고리즘 클래스
