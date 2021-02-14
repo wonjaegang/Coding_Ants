@@ -4,6 +4,8 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QAxContainer import *
 
+# 손재균 하이요
+
 
 # 자동매수/매도 알고리즘 클래스
 class TradingAlgorithm:
